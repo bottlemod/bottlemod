@@ -13,4 +13,4 @@ RUN echo '. /opt/conda/etc/profile.d/conda.sh && conda activate scipy-dev && pip
 COPY *.py /bottlemod/
 COPY createfigures.sh /bottlemod/
 WORKDIR /bottlemod
-CMD ./createfigures.sh
+CMD bash createfigures.sh

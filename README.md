@@ -8,7 +8,7 @@ Usage (especially building the image may take a while):
 
 ```bash
 # build the image
-docker build -t bottlemod .
+docker build -t bottlemod -f dockerfile
 
 # execute it, saving the generated figures to the folder /path/to/figures
 docker run --rm -v /path/to/figures:/bottlemod/figures bottlemod
