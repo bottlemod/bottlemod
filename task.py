@@ -6,6 +6,8 @@ import math
 import bisect
 import numpy as np
 
+# Represents a task (or subtask, step, however the granularity in which BottleMod is being used), abstracted from its execution.
+# cpu_funcs and data_funcs are the resource and data requirement functions of the task respectively.
 class Task:
     def __init__(self, cpu_funcs: List[PPoly], data_funcs: List[Func]):
         self.cpu_funcs = cpu_funcs
@@ -19,7 +21,12 @@ class Task:
             if data_func(data_func.x[-1]) != max_data:
                 raise ValueError('All data funcs must have the same end output.')
 
+# Represents an execution of a task.
+# This brings together the task (and with that its requirement functions) and the input functions provided by the execution environment or previous tasks.
 class TaskExecution:
+
+    # The constructor takes the task (which includes its requirement functions) and input functions and calculates the output.
+    # Output functions as described in the paper are not implemented here, but semantically it would just be `output = task.outputFunc(taskExecution._real_out)`.
     def __init__(self, task: Task, in_cpu_funcs: List[PPoly], in_data_funcs: List[Func]) -> None:
         self._task = task
         self._in_cpu_funcs = in_cpu_funcs
@@ -40,11 +47,14 @@ class TaskExecution:
         self._bottlenecks = []
         self.calculate()
 
+    # Internal function returning the last segment of a function.
     @staticmethod
     def last_segment(func, x):
         last_section_index = bisect.bisect_left(func.x, x) - 1
-        return func[func.x[last_section_index]] if last_section_index >= 0 else PPoly([0, 1], [[0]]) # func
+        return func[func.x[last_section_index]] if last_section_index >= 0 else PPoly([0, 1], [[0]])
 
+    # Internal function.
+    # Calculates the current speed a certain resource (`in_function` being its input function, `out_function` its requirement function) allows the task to make progress at a specific point in time t.
     @staticmethod
     def get_speed(in_function: PPoly, out_function: PPoly, t: float, progress: Union[PPoly, float]) -> Tuple[PPoly, float]:
         in_function = TaskExecution.next_segment_only(in_function, t)
@@ -58,10 +68,13 @@ class TaskExecution:
             # todo: sanity check if len(result.x) == 2 ?
             return result, max_progress_validity
 
+    # Internal helper to trim out problems with floating point rounding errors.
     @staticmethod
     def precision_threshold(val: float):
         return 40 * val * 10 ** (-15)
 
+    # Main function where the calculations happen.
+    # Calculates progress function and bottlenecks as described in the paper.
     def calculate(self):
         (real_data_out, data_bottleneck_list) = self.ppoly_min([out_i(in_i) for (out_i, in_i) in zip(self._task.data_funcs, self._in_data_funcs)])
 
@@ -153,11 +166,13 @@ class TaskExecution:
         self._real_out = real_out[:cur]
         self._bottlenecks = bottlenecks[:len(self._real_out.c[0])]
 
+    # Internal helper function returning all indices where the value is minimal in a list.
     @staticmethod
     def argmin_in_good(liste: list) -> List[int]:
         minval = min(liste)
         return [i for (i, val) in enumerate(liste) if minval == val]
 
+    # Internal function taking two functions and returning a new function describing the minimum of both functions.
     @staticmethod
     def ppoly_min2(func1: PPoly, func2: PPoly) -> Tuple[PPoly, List[int]]:
         minx = min(filter(lambda x: x != -math.inf, itertools.chain(*[func1.x, func2.x])))
@@ -188,6 +203,7 @@ class TaskExecution:
 
         return (res[minx:res.x[-1]], reslist)
 
+    # Same as above, different approach.
     @staticmethod
     def ppoly_min(funcs: List[PPoly]) -> Tuple[PPoly, List[int]]:
         if len(funcs) == 1:
@@ -207,6 +223,7 @@ class TaskExecution:
             reslist = mergelist
         return (res, reslist)
 
+    # From a list of functions, get for each the segment that includes `segment_start`, calculate the minimum of those single-segment functions and return it up the point the segment would change.
     @staticmethod
     def ppoly_min_next_segment(funcs: List[PPoly], segment_start: float) -> Tuple[PPoly, List[int]]:
         func_segments = []
@@ -220,6 +237,7 @@ class TaskExecution:
         res.x[1] = min([f.x[1] for f in func_segments])
         return (res, reslist)
 
+    # Returns the end of the segment of `func` that includes `start`.
     @staticmethod
     def segment_end(func: PPoly, start: float) -> float:
         idx = bisect.bisect_left(func.x, start)
@@ -231,17 +249,22 @@ class TaskExecution:
             segment_end = func.x[idx]
         return segment_end
 
+    # Internal function returning the segment that `start` is in up to its 'natural' end.
     @staticmethod
     def next_segment_only(func: PPoly, start: float) -> PPoly:
         return func[start:TaskExecution.segment_end(func, start)]
 
+    # Retrieves the progress function and the list of bottlenecks calculated for this task execution.
     def get_result(self) -> Tuple[PPoly, List[int]]:
         return (self._real_out, self._bottlenecks)
 
+# Helper function for choosing a color for a bottleneck.
 def get_color_index(bottleneck: int, bottlenecks: List[int]) -> int:
     result = bottleneck - min(bottlenecks)
     return result if result >= 0 else abs(result) + max(bottlenecks)
 
+# Plots a function `func` to the matplotlib axis `ax`.
+# `colordesc` describes the color(s) the function should have. Either as one color for the whole function or as a list of bottlenecks to color the segments depending on their bottleneck.
 def PlotPPoly(ax, func: PPoly, colordesc: Union[List[int], Any], colorbase: List[int] = None, fromtonum: slice = slice(None, None, None)):
     if colorbase == None:
         colorbase = colordesc

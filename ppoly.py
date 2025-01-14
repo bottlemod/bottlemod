@@ -8,7 +8,10 @@ import math
 import numpy
 import itertools
 
+# Class representing a piecewise polynomial function.
+# Based on PPoly from SciPy.
 class PPoly(scipy.interpolate.PPoly):
+    # Initialize PPoly with breakpoints at x and function coefficients c.
     def __init__(self, x, c):
         x = numpy.array(x, dtype="object").flatten()
         if (len(x) > 1) and (x[0] > x[1]):
@@ -16,6 +19,8 @@ class PPoly(scipy.interpolate.PPoly):
         while len(c) > 1 and all([cc == 0 for cc in c[0]]):
             c = c[1:]
         super().__init__(c, x)
+
+    # Internal / private static helper functions.
 
     @staticmethod
     def __addPoly(c1, c2):
@@ -52,9 +57,12 @@ class PPoly(scipy.interpolate.PPoly):
             result = numpy.array(list(itertools.chain(itertools.repeat([0], len(relevantPow.c) - len(result)), result))) + coef * relevantPow.c
         return result
 
+    # Unary minus operator.
     def __neg__(self):
         return PPoly(self.x, -self.c)
 
+    # Binary plus operator.
+    # Calculating the sum of two functions.
     def __add__(self, other) -> PPoly:
         if isinstance(other, PPoly):
             newx = []
@@ -73,9 +81,13 @@ class PPoly(scipy.interpolate.PPoly):
         else:
             return self + PPoly([self.x[0], self.x[-1]], numpy.array(other, ndmin=2))
 
+    # Binary minus operator.
+    # Subtracting a function from another.
     def __sub__(self, other) -> PPoly:
         return self + -other
 
+    # Multiplication operator.
+    # Multiplies two functions or a function with a scalar.
     def __mul__(self, other) -> PPoly:
         if isinstance(other, PPoly):
             newx = []
@@ -97,12 +109,15 @@ class PPoly(scipy.interpolate.PPoly):
     def __rmul__(self, other):
         return self * other
 
+    # Find the common range where functions x1 and x2 are both defined.
     @staticmethod
     def get_intersection_range(x1, x2):
         minx = max(x1[0], x2[0])
         maxx = min(x1[-1], x2[-1])
         return numpy.unique([x for x in itertools.chain(x1, x2) if x >= minx and x <= maxx])
 
+    # Division operator.
+    # Divide a function by another, piecewise constant function or a scalar.
     def __truediv__(self, other) -> PPoly:
         if isinstance(other, PPoly):
             if other.c.shape[0] != 1:
@@ -119,6 +134,7 @@ class PPoly(scipy.interpolate.PPoly):
         else:
             return PPoly(self.x, self.c / other)
 
+    # Allow conversion to a string, formatting the piecewise function into a readable format.
     def __str__(self) -> str:
         result = ""
         x = ["{:.2f}".format(val) for val in self.x]
@@ -139,6 +155,10 @@ class PPoly(scipy.interpolate.PPoly):
             result += "\n"
         return result
 
+    # Call operator.
+    # Can be called with two types of arguments:
+    # 1. Another instance of PPoly: creates a new function by inserting other into this function; basically result = self(other(x)). Argument "nu" is ignored.
+    # 2. A scalar: evaluates the function at the specific location. "nu" is the order of derivative to evaluate.
     def __call__(self, other, nu=0):
         if isinstance(other, PPoly):
             otherpows = [PPoly([-math.inf, math.inf], [[1]]), other]
@@ -198,6 +218,8 @@ class PPoly(scipy.interpolate.PPoly):
         else:
             return super().__call__(other, nu)
 
+    # Find roots of the function; x values where f(x) is zero.
+    # If discontinuity is True, those x values are treated as roots, where a new piece starts, the end of the previous piece evaluates > 0 and the start of the next piece evaluates < 0, or vice versa.
     def roots(self, discontinuity=True):
         result = list(super().roots(False))
         if discontinuity:
@@ -211,6 +233,9 @@ class PPoly(scipy.interpolate.PPoly):
                 lastsector = thissector
         return result
 
+    # Index read operator. Returns part of the function.
+    # If indexed by a scalar x: return the piece belonging to x as a PPoly.
+    # If indexed by a range / slice x: returns the function inside the range (one or more pieces).
     def __getitem__(self, x) -> PPoly:
         if isinstance(x, slice):
             if x.step is not None:
@@ -238,6 +263,8 @@ class PPoly(scipy.interpolate.PPoly):
             endpos = self.x[idx + 1] if idx + 1 < len(self.x) else math.inf
             return PPoly([startpos, endpos], [[val[idx if idx < len(val) else len(val)-1]] for val in self.c])
 
+    # (Internal helper function.)
+    # Compares two sets of function coefficients. True if they describe the same function.
     @staticmethod
     def _equal_coefficients(a: numpy.ndarray, b: numpy.ndarray) -> bool:
         if len(a) == len(b):
@@ -246,6 +273,8 @@ class PPoly(scipy.interpolate.PPoly):
             a, b = b, a # a is always longer than b
         return all(a[0:len(a) - len(b)] == numpy.zeros(len(a) - len(b))) and all(a[len(a) - len(b):] == b)
 
+    # Index write operator.
+    # Overwrites part of the function defined by the range / slice x with the function val (at the same range).
     def __setitem__(self, x: slice, val: PPoly):
         startpos = x.start if x.start is not None else -math.inf
         endpos = x.stop if x.stop is not None else math.inf
