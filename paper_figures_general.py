@@ -7,6 +7,9 @@ import numpy as np
 from matplotlib.transforms import Bbox
 from mpl_toolkits.axisartist.axislines import AxesZero
 
+# for camera ready paper submission only type 1 and truetype fonts are allowed
+plt.rc('pdf', fonttype=42)
+
 def Test1():
     print('Test1 Start')
     out_cpu = [PPoly([0, 10000], [[1]])] * 3

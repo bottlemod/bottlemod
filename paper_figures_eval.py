@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
+# for camera ready paper submission only type 1 and truetype fonts are allowed
+plt.rc('pdf', fonttype=42)
+
 def PlotRealBottleModPerformanceTimes():
     data = [
         [1, 24.186, 23.393, 23.754],
@@ -981,8 +984,8 @@ plt.plot(x, y, c='C1', zorder=2)
 PlotRealExecutionTimes(plt)
 plt.axis((49, 100, 170, 270))
 plt.xlabel('portion of link data rate given to step 1 [%]')
-plt.ylabel('total task execution time [seconds]')
-#plt.gca().set_aspect(1 / 5) # for poster, remove for paper
+plt.ylabel("total task execution time\n[seconds]")
+plt.gca().set_aspect(1 / 5)
 plt.savefig('figures/evalcompare.pdf', bbox_inches='tight', pad_inches=0)
 plt.show()
 
